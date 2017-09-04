@@ -5,6 +5,7 @@ extern crate quickcheck;
 pub mod ir;
 pub mod opt;
 pub mod interpreter;
+pub mod c_backend;
 
 #[cfg(test)]
 mod tests {
