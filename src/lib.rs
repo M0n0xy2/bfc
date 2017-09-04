@@ -2,7 +2,6 @@ extern crate itertools;
 #[cfg(test)]
 extern crate quickcheck;
 
-pub mod utils;
 pub mod ir;
 pub mod opt;
 pub mod interpreter;

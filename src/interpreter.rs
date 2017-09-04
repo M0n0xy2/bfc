@@ -1,7 +1,6 @@
 use std::num::Wrapping;
 use std::io::{self, Read, Write, Bytes};
 
-use utils;
 use ir::Atom;
 
 pub fn interpret<R: Read, W: Write>(ir: &Vec<Atom>, reader: R, writer: W) -> Result<(), InterpreterError> {
@@ -124,3 +123,15 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         Ok(())
     }
 }
+
+mod utils {
+    pub fn offset_usize(base: usize, offset: isize) -> usize {
+        if offset < 0 {
+            base.wrapping_sub((-offset) as usize)
+        } else {
+            base.wrapping_add(offset as usize)
+        }
+    }
+}
+
+
