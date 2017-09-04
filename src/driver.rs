@@ -37,6 +37,8 @@ fn main() {
         ir = opt::run_opts(ir);
     }
 
+    println!("{:?}", ir);
+
     println!("--> INTERPRETING");
-    interpreter::interpret(&ir, io::stdin(), io::stdout()).unwrap();
+    println!("{:?}", interpreter::interpret(&ir, io::stdin(), io::stdout()));
 }

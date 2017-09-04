@@ -5,6 +5,7 @@ pub enum Atom {
     IncValue(i8, isize),
     Print(isize),
     Read(isize),
+    Multiply(i8, isize), // factor, offset
     Loop(Vec<Atom>),
 }
 

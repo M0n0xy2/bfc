@@ -97,6 +97,16 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                         return Err(InterpreterError::EmptyInput);
                     }
                 },
+                Atom::Multiply(factor, offset) => {
+                    let old_value = self.get_memory_offset(offset)?;
+                    let zero_value = self.get_memory_offset(0)?;
+                    let new_value = if factor < 0 {
+                        old_value.wrapping_sub(zero_value * ((-factor) as u8))
+                    } else {
+                        old_value.wrapping_add(zero_value * (factor as u8))
+                    };
+                    self.set_memory_offset(offset, new_value)?;
+                },
                 Atom::Loop(ref sub) => {
                     let mut loop_counter = 0;
                     while self.get_memory_offset(0)? != 0 {

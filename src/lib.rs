@@ -16,7 +16,7 @@ mod tests {
 
     const LOOP_LIMIT: usize = 255 * 4;
 
-    fn get_output(ir: &Vec<Atom>, input: Vec<u8>) -> Result<Vec<u8>, String> {
+    fn get_output(ir: &Vec<Atom>, input: &Vec<u8>) -> Result<Vec<u8>, String> {
         let mut output_buf = Cursor::new(Vec::<u8>::new());
         let result = interpreter::interpret_with_loop_limit(
             &ir,
@@ -46,8 +46,8 @@ mod tests {
             }
 
             let opt_ir = opt::run_opts(ir.clone());
-            let normal_output = get_output(&ir, input.clone());
-            let opt_output = get_output(&opt_ir, input);
+            let normal_output = get_output(&ir, &input);
+            let opt_output = get_output(&opt_ir, &input);
 
             TestResult::from_bool(normal_output == opt_output)
         }

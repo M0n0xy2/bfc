@@ -11,6 +11,7 @@ pub fn run_opts(mut ir: Vec<Atom>) -> Vec<Atom> {
         zero_loops,
         offset_op,
         reorder,
+        add_multiply,
         combine,
         clean
     ];
@@ -98,6 +99,12 @@ fn offset_op(ir: Vec<Atom>) -> Vec<Atom> {
             Read(offset) => {
                 new_ir.push(Read(current_offset.wrapping_add(offset)));
             },
+            Multiply(factor, offset) => {
+                new_ir.push(MovePtr(current_offset));
+                current_offset = 0;
+
+                new_ir.push(Multiply(factor, offset));
+            },
             Loop(sub) => {
                 new_ir.push(MovePtr(current_offset));
                 current_offset = 0;
@@ -130,7 +137,11 @@ fn reorder(ir: Vec<Atom>) -> Vec<Atom> {
         };
 
         match atom {
-            a@MovePtr(_) | a@Print(_) | a@Read(_) | a@Loop(_) => {
+            a@MovePtr(_) |
+            a@Print(_) |
+            a@Read(_) |
+            a@Multiply(_, _) |
+            a@Loop(_) => {
                 temp_ir.sort_by_key(offset_extractor);
                 new_ir.extend(temp_ir.drain(..));
                 new_ir.push(a);
@@ -142,5 +153,60 @@ fn reorder(ir: Vec<Atom>) -> Vec<Atom> {
     }
     temp_ir.sort_by_key(offset_extractor);
     new_ir.extend(temp_ir.into_iter());
+    new_ir
+}
+
+fn add_multiply(ir: Vec<Atom>) -> Vec<Atom> {
+    // really returns a Vec<Atom> to be directly extended in upper "loop"
+    fn work_on_loop(loop_content: Vec<Atom>) -> Vec<Atom> {
+        use std::collections::HashMap;
+
+        let save = loop_content.clone();
+
+        let mut total_ptr_offset = 0isize;
+        let mut increments = HashMap::new();
+        for atom in loop_content {
+            match atom {
+                MovePtr(offset) => {
+                    total_ptr_offset = total_ptr_offset.wrapping_add(offset);
+                },
+                IncValue(inc, offset) => {
+                    let old = increments.entry(
+                        offset.wrapping_add(total_ptr_offset)
+                    ).or_insert(0i8);
+                    *old = old.wrapping_add(inc);
+                }
+                _ => return vec![Atom::Loop(save)]
+            }
+        }
+
+        if let Some(&-1) = increments.get(&0) {
+            if total_ptr_offset == 0 {
+                let mut atoms: Vec<_> = increments
+                    .into_iter()
+                    .filter_map(|(offset, inc)| {
+                        if offset == 0 {
+                            None
+                        } else {
+                            Some(Atom::Multiply(inc, offset))
+                        }
+                    }).collect();
+                atoms.push(Atom::SetValue(0, 0));
+                return atoms;
+            }
+        }
+
+        return vec![Atom::Loop(save)]
+    }
+
+    let mut new_ir = Vec::with_capacity(ir.len());
+    for atom in ir {
+        if let Atom::Loop(sub) = atom {
+            let sub = add_multiply(sub);
+            new_ir.extend(work_on_loop(sub));
+        } else {
+            new_ir.push(atom);
+        }
+    }
     new_ir
 }
