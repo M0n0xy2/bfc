@@ -14,11 +14,21 @@ mod tests {
     use quickcheck::{quickcheck, TestResult};
     use std::io::Cursor;
 
+    const LOOP_LIMIT: usize = 255 * 4;
+
     fn get_output(ir: &Vec<Atom>, input: Vec<u8>) -> Result<Vec<u8>, String> {
         let mut output_buf = Cursor::new(Vec::<u8>::new());
-        let result = interpreter::interpret(&ir, Cursor::new(input), &mut output_buf);
-        result.map(|_| output_buf.into_inner())
-              .map_err(|err| format!("{:?}", err))
+        let result = interpreter::interpret_with_loop_limit(
+            &ir,
+            Cursor::new(input),
+            &mut output_buf,
+            LOOP_LIMIT
+        );
+
+        match result {
+            Ok(_) => Ok(output_buf.into_inner()),
+            Err(err) => Err(format!("{:?}", err)),
+        }
     }
 
     #[test]
