@@ -1,3 +1,4 @@
+use std::num::Wrapping;
 use std::io::{self, Read, Write, Bytes};
 
 use utils;
@@ -25,7 +26,7 @@ const MEM_SIZE: usize = 30_000;
 
 #[derive(Debug)]
 struct Interpreter<R: Read, W: Write> {
-    memory: Vec<u8>,
+    memory: Vec<Wrapping<i8>>,
     ptr: usize,
     loop_limit: Option<usize>,
     reader: Bytes<R>,
@@ -36,7 +37,7 @@ struct Interpreter<R: Read, W: Write> {
 impl<R: Read, W: Write> Interpreter<R, W> {
     pub fn new(reader: R, writer: W, loop_limit: Option<usize>) -> Self {
         Interpreter {
-            memory: vec![0; MEM_SIZE],
+            memory: vec![Wrapping(0); MEM_SIZE],
             ptr: 0,
             loop_limit,
             reader: reader.bytes(),
@@ -44,7 +45,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         }
     }
 
-    fn set_memory_offset(&mut self, offset: isize, value: u8) -> Result<(), InterpreterError> {
+    fn set_memory_offset(&mut self, offset: isize, value: Wrapping<i8>) -> Result<(), InterpreterError> {
         let ptr = utils::offset_usize(self.ptr, offset) % MEM_SIZE;
         if let Some(cell) = self.memory.get_mut(ptr) {
             *cell = value;
@@ -54,7 +55,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         }
     }
 
-    fn get_memory_offset(&self, offset: isize) -> Result<u8, InterpreterError> {
+    fn get_memory_offset(&self, offset: isize) -> Result<Wrapping<i8>, InterpreterError> {
         let ptr = utils::offset_usize(self.ptr, offset) % MEM_SIZE;
         if let Some(cell) = self.memory.get(ptr) {
             Ok(*cell)
@@ -70,15 +71,15 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                     self.ptr = utils::offset_usize(self.ptr, offset) % MEM_SIZE;
                 },
                 Atom::SetValue(value, offset) => {
-                    self.set_memory_offset(offset, value)?;
+                    self.set_memory_offset(offset, Wrapping(value))?;
                 },
                 Atom::IncValue(inc, offset) => {
                     let old_value = self.get_memory_offset(offset)?;
-                    let new_value = utils::offset_u8(old_value, inc);
+                    let new_value = old_value + Wrapping(inc);
                     self.set_memory_offset(offset, new_value)?;
                 },
                 Atom::Print(offset) => {
-                    let to_write = self.get_memory_offset(offset)?;
+                    let to_write = self.get_memory_offset(offset)?.0 as u8;
                     self.writer
                         .write(&[to_write])
                         .unwrap();
@@ -87,7 +88,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                     if let Some(next) = self.reader.next() {
                         match next {
                             Ok(c) => {
-                                self.set_memory_offset(offset, c)?;
+                                self.set_memory_offset(offset, Wrapping(c as i8))?;
                             },
                             Err(err) => {
                                 return Err(InterpreterError::IOError(err));
@@ -100,16 +101,12 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                 Atom::Multiply(factor, offset) => {
                     let old_value = self.get_memory_offset(offset)?;
                     let zero_value = self.get_memory_offset(0)?;
-                    let new_value = if factor < 0 {
-                        old_value.wrapping_sub(zero_value * ((-factor) as u8))
-                    } else {
-                        old_value.wrapping_add(zero_value * (factor as u8))
-                    };
+                    let new_value = old_value + zero_value * Wrapping(factor);
                     self.set_memory_offset(offset, new_value)?;
                 },
                 Atom::Loop(ref sub) => {
                     let mut loop_counter = 0;
-                    while self.get_memory_offset(0)? != 0 {
+                    while self.get_memory_offset(0)?.0 != 0 {
                         // checking the loop limiter
                         loop_counter += 1;
                         if let Some(loop_limit) = self.loop_limit {

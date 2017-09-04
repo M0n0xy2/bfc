@@ -1,6 +1,5 @@
 use itertools::Itertools;
 
-use utils;
 use ir::Atom;
 use ir::Atom::*;
 
@@ -33,7 +32,7 @@ fn combine(ir: Vec<Atom>) -> Vec<Atom> {
                 Ok(SetValue(sv, o1))
             },
             (SetValue(sv, o1), IncValue(ov, o2)) if o1 == o2 => {
-                Ok(SetValue(utils::offset_u8(sv, ov), o1))
+                Ok(SetValue(sv.wrapping_add(ov), o1))
             },
             (SetValue(_, o1), SetValue(sv, o2)) if o1 == o2 => {
                 Ok(SetValue(sv, o1))

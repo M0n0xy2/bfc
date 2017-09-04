@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Atom {
     MovePtr(isize),
-    SetValue(u8, isize),
+    SetValue(i8, isize),
     IncValue(i8, isize),
     Print(isize),
     Read(isize),
