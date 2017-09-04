@@ -1,0 +1,19 @@
+[package]
+name = "bfc"
+version = "0.1.0"
+authors = ["Paul CACHEUX <paulcacheux@gmail.com>"]
+
+[lib]
+name = "bfc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bfc_driver"
+path = "src/driver.rs"
+
+[dependencies]
+itertools = "0.6"
+clap = "2.26"
+
+[dev-dependencies]
+quickcheck = "0.4.1"
