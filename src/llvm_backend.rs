@@ -7,11 +7,14 @@ use std::ffi::CString;
 
 use ir::Atom;
 
-pub fn jit_ir(ir: &Vec<Atom>) -> Result<(), CString> {
+pub fn jit_ir(ir: &Vec<Atom>, opt: bool) -> Result<(), CString> {
     unsafe {
         let mut builder = LLVMBackendBuilder::new();
         builder.generate(ir);
         let mut backend = builder.build()?;
+        if opt {
+            backend.do_opt();
+        }
         backend.run_jit();
     }
     Ok(())
@@ -330,16 +333,6 @@ impl LLVMBackendBuilder {
                 return Err(CString::from_raw(error))
             }
             
-            // optimisations
-            let pass = llvm::core::LLVMCreatePassManager();
-            llvm::transforms::scalar::LLVMAddConstantPropagationPass(pass);
-            llvm::transforms::scalar::LLVMAddInstructionCombiningPass(pass);
-            llvm::transforms::scalar::LLVMAddPromoteMemoryToRegisterPass(pass);
-            llvm::transforms::scalar::LLVMAddGVNPass(pass);
-            llvm::transforms::scalar::LLVMAddCFGSimplificationPass(pass);
-            llvm::core::LLVMRunPassManager(pass, self.module);
-            llvm::core::LLVMDisposePassManager(pass);
-
             LLVMBackend::new(self.module, self.brainfuck_fn)
         }
     }
@@ -398,6 +391,17 @@ impl LLVMBackend {
             module,
             brainfuck_fn
         })
+    }
+
+    unsafe fn do_opt(&mut self) {
+        let pass = llvm::core::LLVMCreatePassManager();
+        llvm::transforms::scalar::LLVMAddConstantPropagationPass(pass);
+        llvm::transforms::scalar::LLVMAddInstructionCombiningPass(pass);
+        llvm::transforms::scalar::LLVMAddPromoteMemoryToRegisterPass(pass);
+        llvm::transforms::scalar::LLVMAddGVNPass(pass);
+        llvm::transforms::scalar::LLVMAddCFGSimplificationPass(pass);
+        llvm::core::LLVMRunPassManager(pass, self.module);
+        llvm::core::LLVMDisposePassManager(pass);
     }
 
     unsafe fn run_jit(&mut self) {

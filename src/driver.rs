@@ -39,7 +39,8 @@ fn main() {
     let path = matches.value_of("INPUT").unwrap();
     let buf = slurp_file(path).unwrap();
     let mut ir = ir::build_ir(&buf).unwrap();
-    if matches.is_present("opt") {
+    let opt = matches.is_present("opt");
+    if opt {
         ir = opt::run_opts(ir);
     }
     
@@ -60,7 +61,7 @@ fn main() {
             }
         },
         Some("jit") => {
-            if let Err(err) = llvm_backend::jit_ir(&ir) {
+            if let Err(err) = llvm_backend::jit_ir(&ir, opt) {
                 println!("LLVM Error: {:?}", err);
             }
         }
