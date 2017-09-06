@@ -12,9 +12,9 @@ pub fn jit_ir(ir: &Vec<Atom>) -> Result<(), CString> {
         let mut builder = LLVMBackendBuilder::new();
         builder.generate(ir);
         let mut backend = builder.build()?;
-        backend.run_jit()?;
-        Ok(())
+        backend.run_jit();
     }
+    Ok(())
 }
 
 const MEM_SIZE: isize = 30000;
@@ -340,10 +340,7 @@ impl LLVMBackendBuilder {
             llvm::core::LLVMRunPassManager(pass, self.module);
             llvm::core::LLVMDisposePassManager(pass);
 
-            Ok(LLVMBackend {
-                module: self.module,
-                brainfuck_fn: self.brainfuck_fn,
-            })
+            LLVMBackend::new(self.module, self.brainfuck_fn)
         }
     }
 }
@@ -358,59 +355,67 @@ impl Drop for LLVMBackendBuilder {
 
 #[derive(Debug, Clone)]
 struct LLVMBackend {
+    exec_engine: LLVMExecutionEngineRef,
     module: LLVMModuleRef,
     brainfuck_fn: LLVMValueRef,
 }
 
 impl LLVMBackend {
-    unsafe fn run_jit(&mut self) -> Result<(), CString> {
+    fn new(module: LLVMModuleRef, brainfuck_fn: LLVMValueRef)
+        -> Result<LLVMBackend, CString> {
         use llvm::execution_engine::LLVMMCJITCompilerOptions;
 
         let mut exec_engine: LLVMExecutionEngineRef = std::ptr::null_mut();
-        let mut error: *mut c_char = std::ptr::null_mut();
-        let mut options: LLVMMCJITCompilerOptions = std::mem::zeroed();
-        let options_size = 
-            std::mem::size_of::<LLVMMCJITCompilerOptions>();
-        llvm::execution_engine::LLVMInitializeMCJITCompilerOptions(
-            &mut options,
-            options_size
-        );
+        unsafe {
+            let mut error: *mut c_char = std::ptr::null_mut();
+            let mut options: LLVMMCJITCompilerOptions = std::mem::zeroed();
+            let options_size = 
+                std::mem::size_of::<LLVMMCJITCompilerOptions>();
+            llvm::execution_engine::LLVMInitializeMCJITCompilerOptions(
+                &mut options,
+                options_size
+            );
 
-        options.OptLevel = 1;
+            options.OptLevel = 3;
 
-        llvm::target::LLVM_InitializeNativeTarget();
-        llvm::target::LLVM_InitializeNativeAsmPrinter();
-        llvm::target::LLVM_InitializeNativeAsmParser();
-        llvm::execution_engine::LLVMLinkInMCJIT();
-        llvm::execution_engine::LLVMCreateMCJITCompilerForModule(
-            &mut exec_engine,
-            self.module,
-            &mut options,
-            options_size,
-            &mut error
-        );
-
-        if !error.is_null() {
-            return Err(CString::from_raw(error));
+            llvm::target::LLVM_InitializeNativeTarget();
+            llvm::target::LLVM_InitializeNativeAsmPrinter();
+            llvm::target::LLVM_InitializeNativeAsmParser();
+            llvm::execution_engine::LLVMLinkInMCJIT();
+            if llvm::execution_engine::LLVMCreateMCJITCompilerForModule(
+                &mut exec_engine,
+                module,
+                &mut options,
+                options_size,
+                &mut error
+                ) != 0 {
+                return Err(CString::from_raw(error));
+            }
         }
 
-        llvm::execution_engine::LLVMRunFunction(
+        Ok(LLVMBackend {
             exec_engine,
+            module,
+            brainfuck_fn
+        })
+    }
+
+    unsafe fn run_jit(&mut self) {
+        llvm::execution_engine::LLVMRunFunction(
+            self.exec_engine,
             self.brainfuck_fn,
             0,
             std::ptr::null_mut()
         );
-
-        Ok(())
-
-        //TODO dispose MCJIT
     }
 }
 
 impl Drop for LLVMBackend {
     fn drop(&mut self) {
         unsafe {
-            llvm::core::LLVMDisposeModule(self.module);
+            llvm::execution_engine::LLVMDisposeExecutionEngine(self.exec_engine);
+            // llvm::core::LLVMDisposeModule(self.module);
+            llvm::core::LLVMShutdown();
         }
     }
 }
