@@ -1,0 +1,3 @@
+### TODO
+- LLVMBackend: free memory at end
+- Opt: optimize zero-cell-search (memchr)
