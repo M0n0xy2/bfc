@@ -27,61 +27,71 @@ struct LLVMBackendBuilder {
     module: LLVMModuleRef,
     brainfuck_fn: LLVMValueRef,
     builder: LLVMBuilderRef,
+    memory: LLVMValueRef,
     ptr: LLVMValueRef,
     putchar_fn: LLVMValueRef,
     getchar_fn: LLVMValueRef,
+    free_fn: LLVMValueRef,
 }
 
 impl LLVMBackendBuilder {
     unsafe fn new() -> LLVMBackendBuilder {
+        macro_rules! add_function {
+            ($module:expr, $name:expr, $ret_ty:expr, $args:expr) => {
+                {
+                    let mut args = $args;
+                    let args_len = args.len();
+                    let fn_ty = llvm::core::LLVMFunctionType(
+                        $ret_ty,
+                        args.as_mut_ptr(),
+                        args_len as _,
+                        0
+                    );
+                    llvm::core::LLVMAddFunction(
+                        $module,
+                        $name.as_ptr() as *const _,
+                        fn_ty
+                    )
+                }
+            };
+            ($module:expr, $name:expr, $ret_ty:expr, []) => {
+                {
+                    let fn_ty = llvm::core::LLVMFunctionType(
+                        $ret_ty,
+                        std::ptr::null_mut(),
+                        0,
+                        0
+                    );
+                    llvm::core::LLVMAddFunction(
+                        $module,
+                        $name.as_ptr() as *const _,
+                        fn_ty
+                    )
+                }
+            }
+        }
+
+
         let module = llvm::core::LLVMModuleCreateWithName(
             b"main_module\0".as_ptr() as *const _
         );
 
         let builder = llvm::core::LLVMCreateBuilder();
         
-        let void_ty = llvm::core::LLVMVoidType();
         let i8_ty = llvm::core::LLVMInt8Type();
         let i32_ty = llvm::core::LLVMInt32Type();
+        let void_ty = llvm::core::LLVMVoidType();
+        let i8_ptr_ty = llvm::core::LLVMPointerType(i8_ty, 0);
 
-        // putchar function
-        let putchar_fn_ty = llvm::core::LLVMFunctionType(
-            i32_ty,
-            [i32_ty].as_mut_ptr(),
-            1,
-            0
-        );
-        let putchar_fn = llvm::core::LLVMAddFunction(
+        let putchar_fn = add_function!(module, b"putchar\0", i32_ty, [i32_ty]);
+        let getchar_fn = add_function!(module, b"getchar\0", i32_ty, []);
+        let calloc_fn = add_function!(
             module,
-            b"putchar\0".as_ptr() as *const _,
-            putchar_fn_ty
+            b"calloc\0",
+            i8_ptr_ty,
+            [i32_ty, i32_ty]
         );
-
-        // getchar function
-        let getchar_fn_ty = llvm::core::LLVMFunctionType(
-            i32_ty,
-            std::ptr::null_mut(),
-            0,
-            0
-        );
-        let getchar_fn = llvm::core::LLVMAddFunction(
-            module,
-            b"getchar\0".as_ptr() as *const _,
-            getchar_fn_ty
-        );
-
-        // calloc function
-        let calloc_fn_ty = llvm::core::LLVMFunctionType(
-            llvm::core::LLVMPointerType(llvm::core::LLVMInt8Type(), 0),
-            [i32_ty, i32_ty].as_mut_ptr(),
-            2,
-            0
-        );
-        let calloc_fn = llvm::core::LLVMAddFunction(
-            module,
-            b"calloc\0".as_ptr() as *const _,
-            calloc_fn_ty
-        );
+        let free_fn = add_function!(module, b"free\0", void_ty, [i8_ptr_ty]);
 
         let bf_fn_ty = llvm::core::LLVMFunctionType(
             void_ty,
@@ -133,9 +143,11 @@ impl LLVMBackendBuilder {
             module,
             brainfuck_fn: bf_fn,
             builder,
+            memory,
             ptr,
             putchar_fn,
             getchar_fn,
+            free_fn,
         }
     }
 
@@ -322,6 +334,13 @@ impl LLVMBackendBuilder {
 
     fn build(self) -> Result<LLVMBackend, CString> {
         unsafe {
+            llvm::core::LLVMBuildCall(
+                self.builder,
+                self.free_fn,
+                [self.memory].as_mut_ptr(),
+                1,
+                b"\0".as_ptr() as *const _
+            );
             llvm::core::LLVMBuildRetVoid(self.builder);
 
             let mut error: *mut c_char = std::ptr::null_mut();
