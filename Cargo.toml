@@ -4,11 +4,11 @@ version = "0.1.0"
 authors = ["Paul CACHEUX <paulcacheux@gmail.com>"]
 
 [lib]
-name = "bfc"
+name = "brainfuck"
 path = "src/lib.rs"
 
 [[bin]]
-name = "bfc_driver"
+name = "bfc"
 path = "src/driver.rs"
 
 [dependencies]

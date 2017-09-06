@@ -1,4 +1,4 @@
-extern crate bfc;
+extern crate brainfuck;
 extern crate clap;
 
 use std::fs::File;
@@ -7,7 +7,7 @@ use std::path::Path;
 
 use clap::{Arg, App};
 
-use bfc::{ir, opt, interpreter, c_backend, llvm_backend};
+use brainfuck::{ir, opt, interpreter, c_backend, llvm_backend};
 
 fn main() {
     let matches = App::new("Brainfuck Compiler")
