@@ -7,7 +7,7 @@ use std::path::Path;
 
 use clap::{Arg, App};
 
-use bfc::{ir, opt, interpreter, c_backend};
+use bfc::{ir, opt, interpreter, c_backend, llvm_backend};
 
 fn main() {
     let matches = App::new("Brainfuck Compiler")
@@ -22,7 +22,7 @@ fn main() {
              .short("t")
              .long("type")
              .takes_value(true)
-             .possible_values(&["c", "interpreter"])
+             .possible_values(&["c", "interpreter", "jit"])
              .requires_if("c", "OUTPUT"))
         .arg(Arg::with_name("INPUT")
              .help("Input file")
@@ -59,6 +59,11 @@ fn main() {
                 println!("Error while writing C file: {}", err);
             }
         },
+        Some("jit") => {
+            if let Err(err) = llvm_backend::jit_ir(&ir) {
+                println!("LLVM Error: {:?}", err);
+            }
+        }
         _ => unreachable!()
     }
 }

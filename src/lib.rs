@@ -1,11 +1,13 @@
 extern crate itertools;
 #[cfg(test)]
 extern crate quickcheck;
+extern crate llvm_sys as llvm;
 
 pub mod ir;
 pub mod opt;
 pub mod interpreter;
 pub mod c_backend;
+pub mod llvm_backend;
 
 #[cfg(test)]
 mod tests {
