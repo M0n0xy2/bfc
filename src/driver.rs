@@ -7,7 +7,7 @@ use std::path::Path;
 
 use clap::{Arg, App};
 
-use brainfuck::{ir, opt, interpreter, backend, llvm_backend};
+use brainfuck::{ir, opt, backend, llvm_backend};
 
 fn main() {
     let matches = App::new("Brainfuck Compiler")
@@ -50,7 +50,12 @@ fn main() {
 
     match matches.value_of("type") {
         Some("interpreter") | None => {
-            if let Err(err) = interpreter::interpret(&ir, io::stdin(), io::stdout()) {
+            let interpreter_backend = backend::Interpreter::new(
+                io::stdin(),
+                io::stdout(),
+                None
+            );
+            if let Err(err) = backend::use_backend(interpreter_backend, &ir) {
                 println!("Interpreting finished with error: {:?}", err);
             }
         },

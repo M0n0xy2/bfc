@@ -43,41 +43,41 @@ impl<W: Write> Backend for CBackend<W> {
         writeln!(&mut self.writer, "}}")
     }
 
-    fn add_move_ptr(&mut self, offset: isize) -> Result<(), Self::Error> {
+    fn push_move_ptr(&mut self, offset: isize) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "ptr += {};", offset)
     }
 
-    fn add_set_value(&mut self, value: i8, offset: isize) -> Result<(), Self::Error> {
+    fn push_set_value(&mut self, value: i8, offset: isize) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "*(ptr + {}) = {};", offset, value)
     }
 
-    fn add_inc_value(&mut self, inc: i8, offset: isize) -> Result<(), Self::Error> {
+    fn push_inc_value(&mut self, inc: i8, offset: isize) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "*(ptr + {}) += {};", offset, inc)
     }
 
-    fn add_print(&mut self, offset: isize) -> Result<(), Self::Error> {
+    fn push_print(&mut self, offset: isize) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "putchar(*(ptr + {}));", offset)
     }
 
-    fn add_read(&mut self, offset: isize) -> Result<(), Self::Error> {
+    fn push_read(&mut self, offset: isize) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "*(ptr + {}) = getchar();", offset)
     }
 
-    fn add_multiply(&mut self, factor: i8, offset: isize) -> Result<(), Self::Error> {
+    fn push_multiply(&mut self, factor: i8, offset: isize) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "*(ptr + {}) += *(ptr) * {};", offset, factor)
     }
 
-    fn add_loop(&mut self, sub: &Vec<Atom>) -> Result<(), Self::Error> {
+    fn push_loop(&mut self, sub: &Vec<Atom>) -> Result<(), Self::Error> {
         self.write_tab()?;
         writeln!(&mut self.writer, "while(*ptr) {{")?;
         self.current_tab += 1;
-        self.add_atoms(sub)?;
+        self.push_atoms(sub)?;
         self.current_tab -= 1;
         self.write_tab()?;
         writeln!(&mut self.writer, "}}")
