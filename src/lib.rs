@@ -6,6 +6,7 @@ extern crate llvm_sys as llvm;
 pub mod ir;
 pub mod opt;
 pub mod interpreter;
+pub mod backend;
 pub mod c_backend;
 pub mod llvm_backend;
 

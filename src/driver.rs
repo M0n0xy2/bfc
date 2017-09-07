@@ -7,7 +7,7 @@ use std::path::Path;
 
 use clap::{Arg, App};
 
-use brainfuck::{ir, opt, interpreter, c_backend, llvm_backend};
+use brainfuck::{ir, opt, interpreter, backend, llvm_backend};
 
 fn main() {
     let matches = App::new("Brainfuck Compiler")
@@ -78,5 +78,6 @@ fn slurp_file<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
 
 fn write_c<P: AsRef<Path>>(path: P, ir: &Vec<ir::Atom>) -> io::Result<()> {
     let output_file = File::create(path)?;
-    c_backend::write_from_ir(ir, output_file)
+    let c_backend = backend::CBackend::new(output_file);
+    backend::use_backend(c_backend, ir)
 }
