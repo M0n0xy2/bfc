@@ -6,7 +6,6 @@ extern crate llvm_sys as llvm;
 pub mod ir;
 pub mod opt;
 pub mod backend;
-pub mod llvm_backend;
 
 #[cfg(test)]
 mod tests {

@@ -4,10 +4,12 @@ extern crate clap;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
+use std::ffi::CString;
 
 use clap::{Arg, App};
 
-use brainfuck::{ir, opt, backend, llvm_backend};
+use brainfuck::{ir, opt, backend};
+use ir::Atom;
 
 fn main() {
     let matches = App::new("Brainfuck Compiler")
@@ -66,7 +68,7 @@ fn main() {
             }
         },
         Some("jit") => {
-            if let Err(err) = llvm_backend::jit_ir(&ir, opt) {
+            if let Err(err) = llvm_jit(&ir, opt) {
                 println!("LLVM Error: {:?}", err);
             }
         }
@@ -85,4 +87,14 @@ fn write_c<P: AsRef<Path>>(path: P, ir: &Vec<ir::Atom>) -> io::Result<()> {
     let output_file = File::create(path)?;
     let c_backend = backend::CBackend::new(output_file);
     backend::use_backend(c_backend, ir)
+}
+
+fn llvm_jit(ir: &Vec<Atom>, opt: bool) -> Result<(), CString> {
+    let llvm_backend = backend::LLVMBackend::new();
+    let mut llvm_brainfuck_mod = backend::use_backend(llvm_backend, ir)?;
+    if opt {
+        llvm_brainfuck_mod.optimize();
+    }
+    llvm_brainfuck_mod.jit_run();
+    Ok(())
 }

@@ -2,8 +2,10 @@ use ir::Atom;
 
 pub mod c;
 pub mod interpreter;
+pub mod llvm;
 pub use self::c::CBackend;
 pub use self::interpreter::Interpreter;
+pub use self::llvm::LLVMBackend;
 
 pub fn use_backend<B: Backend>(mut backend: B, ir: &Vec<Atom>)
     -> Result<B::Payload, B::Error> {
