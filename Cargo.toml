@@ -14,7 +14,7 @@ path = "src/driver.rs"
 [dependencies]
 itertools = "0.6"
 clap = "2.26"
-llvm-sys = "40"
+llvm-sys = "50"
 
 [dev-dependencies]
 quickcheck = "0.4.1"

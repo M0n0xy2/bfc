@@ -31,6 +31,7 @@ fn main() {
              .required(true)
              .index(1))
         .arg(Arg::with_name("ir")
+             .long("ir")
              .help("Print ir to stdout"))
         .arg(Arg::with_name("OUTPUT")
             .help("Output file")
@@ -95,6 +96,7 @@ fn llvm_jit(ir: &Vec<Atom>, opt: bool) -> Result<(), CString> {
     if opt {
         llvm_brainfuck_mod.optimize();
     }
+    eprintln!("[info] Compilation done.");
     llvm_brainfuck_mod.jit_run();
     Ok(())
 }
