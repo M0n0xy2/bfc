@@ -11,7 +11,9 @@ pub fn run_opts(mut ir: Vec<Atom>) -> Vec<Atom> {
         offset_op,
         reorder,
         add_multiply,
+        add_reset_after_loop,
         combine,
+        remove_reset_after_loop,
         clean
     ];
 
@@ -208,4 +210,33 @@ fn add_multiply(ir: Vec<Atom>) -> Vec<Atom> {
         }
     }
     new_ir
+}
+
+fn add_reset_after_loop(ir: Vec<Atom>) -> Vec<Atom> {
+    let mut new_ir = Vec::with_capacity(ir.len());
+
+    for atom in ir {
+        if let Atom::Loop(sub) = atom {
+            new_ir.push(Atom::Loop(add_reset_after_loop(sub)));
+            new_ir.push(Atom::SetValue(0, 0));
+        } else {
+            new_ir.push(atom);
+        }
+    }
+    new_ir
+}
+
+fn remove_reset_after_loop(ir: Vec<Atom>) -> Vec<Atom> {
+    ir.into_iter().map(|atom| {
+        if let Atom::Loop(sub) = atom {
+            Atom::Loop(remove_reset_after_loop(sub))
+        } else {
+            atom
+        }
+    }).coalesce(|a, b| {
+        match (a, b) {
+            (l@Atom::Loop(_), Atom::SetValue(0, 0)) => Ok(l),
+            other => Err(other)
+        }
+    }).collect()
 }
