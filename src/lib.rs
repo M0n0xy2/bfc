@@ -9,7 +9,7 @@ pub mod backend;
 
 #[cfg(test)]
 mod tests {
-    use super::{ir, interpreter, opt};
+    use super::{ir, backend, opt};
     use ir::Atom;
     use quickcheck::{quickcheck, TestResult};
     use std::io::Cursor;
@@ -18,12 +18,15 @@ mod tests {
 
     fn get_output(ir: &Vec<Atom>, input: &Vec<u8>) -> Result<Vec<u8>, String> {
         let mut output_buf = Cursor::new(Vec::<u8>::new());
-        let result = interpreter::interpret_with_loop_limit(
-            &ir,
-            Cursor::new(input),
-            &mut output_buf,
-            LOOP_LIMIT
-        );
+
+        let result = {
+            let interpreter = backend::Interpreter::new(
+                Cursor::new(input),
+                &mut output_buf,
+                Some(LOOP_LIMIT)
+            );
+            backend::use_backend(interpreter, &ir)
+        };
 
         match result {
             Ok(_) => Ok(output_buf.into_inner()),
@@ -53,5 +56,23 @@ mod tests {
         }
 
         quickcheck(opt_no_change as fn(Vec<u8>, Vec<u8>) -> TestResult);
+    }
+
+    #[test]
+    fn quickcheck_opt_idempotent() {
+        fn opt_idempotent(prog: Vec<u8>) -> TestResult {
+            let ir = if let Ok(ir) = ir::build_ir(&prog) {
+                ir
+            } else {
+                return TestResult::discard();
+            };
+
+            let opt1 = opt::run_opts(ir);
+            let opt2 = opt::run_opts(opt1.clone());
+
+            TestResult::from_bool(opt1 == opt2)
+        }
+
+        quickcheck(opt_idempotent as fn(Vec<u8>) -> TestResult);
     }
 }

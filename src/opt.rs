@@ -3,6 +3,8 @@ use itertools::Itertools;
 use ir::Atom;
 use ir::Atom::*;
 
+const OPT_N_RUN: usize = 2;
+
 pub fn run_opts(mut ir: Vec<Atom>) -> Vec<Atom> {
     let opts = [
         combine,
@@ -17,9 +19,12 @@ pub fn run_opts(mut ir: Vec<Atom>) -> Vec<Atom> {
         clean
     ];
 
-    for opt in &opts {
-        ir = opt(ir);
+    for _ in 0..OPT_N_RUN {
+        for opt in &opts {
+            ir = opt(ir);
+        }
     }
+    
     ir
 }
 
